@@ -1,0 +1,69 @@
+### Executive Summary
+
+This document reviews 1974 *Motor Trend* US magazines' data to investigate if the type of tranmission used has an effect on miles per gallon (mpg) yielded.
+It looks at exactly what type of effect (positive or negative),
+and then explores an approach to find a possible value or range of values this effect has.
+
+```{r echo = TRUE}
+library(datasets)
+library(lattice)
+
+# Exploratory phase, looking at data and residuals - may be fruitless
+fit <- lm(mpg ~ ., mtcars)
+par(mfrow = c(2,2))
+plot(fit)
+
+## Exploratory, looking at Correlation between variables; am, mpg and other variables
+amMpgCor <- cbind(cor(mtcars)[,"am"], cor(mtcars)[,"mpg"])
+colnames(amMpgCor) <- c("am_Cor", "mpg_Cor")
+print(amMpgCor["am","mpg_Cor"])
+```
+
+#### Is an automatic or manual transmission better for MPG
+Given the data here, it appears there is a definite **correlation** between am and mpg.
+It appears there is a **positive** correlation between miles per gallon and **manual** transmission (am = 1 is manual; am = 0 is automatic).
+In short, **manual transmission is better for MPG than automatic.**
+
+#### Quantify the MPG difference between automatic and manual transmissions
+
+We can use the t test to identify a range.
+
+```{r echo = TRUE}
+unfitConf <- t.test(mpg ~ am, mtcars)
+print(c(unfitConf$conf.int[1],unfitConf$conf.int[2]))
+```
+
+So can say that we can be **95% confident that manual tranmission increases miles per gallon somewhere between `r -unfitConf$conf.int[2]` and `r -unfitConf$conf.int[1]`.**
+
+Unfortunately, the data is multivariate, and the correlation is not quite as simple.
+We can see there are many factors that affect mpg (see appendix for amMpgCor output).
+Ideally, 100% should be accounted for by am, but given that the cov we calculated is about 0.6, the relationship is not necessarily direct.
+
+So, in order to see if we need to factor the other variables, we will take our fitted regression line with all variables, and compare it to a line with just mpg vs am.
+
+```{r echo = TRUE}
+unfit <- lm(mpg ~ am, mtcars)
+semifit <- lm(mpg ~ am + wt + cyl + disp, mtcars )
+anova(fit, semifit, unfit)
+```
+
+This confirms we cannot ignore other variations, and and could find an equation close to the "mpg vs am" plot (see appendix) that accounts for the variances to get a stronger, tighter confidence interval.
+As you can see, "semifit" matches the original data nicely, yet is closer to "mpg vs am" than "fit" is.
+However, exploration of this "semifit" data would require additional length than allowed.
+
+<div style="page-break-after: always;"></div>
+### Appendix
+
+```{r echo = TRUE}
+print(amMpgCor)
+
+par(mfrow = c(2,2))
+plot(unfit)
+```
+
+```{r echo = TRUE}
+# Also performed the following; cannot fit into appendix or here
+# for(var in colnames(mtcars[,2:ncol(mtcars)])) {
+#  	print(xyplot(mpg ~ mtcars[,var] | am, mtcars, xlab = var))
+# }
+```
